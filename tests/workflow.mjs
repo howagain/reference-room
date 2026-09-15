@@ -161,6 +161,109 @@ assert.equal(
   (await call('files/' + upload.id, undefined, 'unrelated-agency')).status,
   404,
 );
+// Accountless clients can contribute references only to their invited room.
+const clientImage = new FormData();
+clientImage.set('clientId', c.id);
+clientImage.set(
+  'file',
+  new Blob([png], { type: 'image/png' }),
+  'client-reference.png',
+);
+clientImage.set('notes', 'Keep this spacing');
+const clientUpload = await fetch(`${origin}/api/upload`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: clientImage,
+});
+assert.equal(clientUpload.status, 201);
+const clientUploadId = (await clientUpload.json()).id;
+guest = (await call('workspace', undefined, '', token)).data;
+assert.equal(
+  guest.designs.find((x) => x.id === clientUploadId).notes,
+  'Keep this spacing',
+);
+clientImage.set('clientId', other.id);
+assert.equal(
+  (
+    await fetch(`${origin}/api/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: clientImage,
+    })
+  ).status,
+  404,
+);
+clientImage.set('clientId', c.id);
+clientImage.set(
+  'file',
+  new Blob(['not an image'], { type: 'image/png' }),
+  'invalid.png',
+);
+assert.equal(
+  (
+    await fetch(`${origin}/api/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: clientImage,
+    })
+  ).status,
+  400,
+);
+assert.equal(
+  (
+    await call(
+      'designs',
+      {
+        clientId: c.id,
+        directions: JSON.stringify({
+          designs: [{ title: 'No', html: '<p>No</p>' }],
+        }),
+      },
+      '',
+      token,
+    )
+  ).status,
+  403,
+);
+assert.equal(
+  (
+    await call(
+      'designs',
+      {
+        clientId: c.id,
+        title: 'Client link',
+        kind: 'link',
+        url: 'https://example.com',
+        notes: 'Useful reference',
+      },
+      '',
+      token,
+    )
+  ).status,
+  200,
+);
+assert.equal(
+  (
+    await call(
+      'designs',
+      {
+        clientId: other.id,
+        title: 'Wrong room',
+        kind: 'link',
+        url: 'https://example.com',
+      },
+      '',
+      token,
+    )
+  ).status,
+  404,
+);
+assert.equal(
+  (await call('workspace', undefined, '', token)).data.designs.filter(
+    (x) => x.kind === 'image',
+  ).length,
+  2,
+);
 await call('invite', { clientId: c.id, revoke: true });
 assert.equal((await call('workspace', undefined, '', token)).status, 401);
 const cross = await fetch(`${origin}/api/agency`, {

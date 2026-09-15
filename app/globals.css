@@ -1318,3 +1318,247 @@ summary {
 .review-canvas iframe {
   pointer-events: none;
 }
+
+/* Public landing and invitation entry. */
+.landing {
+  background: #fff;
+  color: #23242b;
+}
+.landing-header,
+.landing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px max(6vw, 24px);
+}
+.landing-header {
+  border-bottom: 1px solid #e4e5ec;
+}
+.landing-header nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.landing-header nav > a:not(.button),
+.landing-footer a {
+  font-size: 0.875rem;
+  text-underline-offset: 4px;
+}
+.landing-header nav > a:not(.button) {
+  text-decoration: none;
+}
+.landing-header nav > a:hover {
+  text-decoration: underline;
+}
+.landing-hero {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  align-items: center;
+  gap: 8%;
+  padding: 90px max(6vw, 24px);
+}
+.landing-hero h1 {
+  font-size: clamp(3.2rem, 5.7vw, 6rem);
+  margin-bottom: 26px;
+}
+.landing-hero h1 em {
+  color: var(--accent);
+  font-family: Georgia, serif;
+  font-weight: 400;
+}
+.landing-lead {
+  font-size: 1.2rem;
+  color: #545764;
+  max-width: 550px;
+}
+.landing-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin: 30px 0 20px;
+}
+.landing-actions > a:not(.button) {
+  font-size: 0.875rem;
+  text-underline-offset: 4px;
+}
+.landing-note {
+  font-size: 0.875rem;
+  max-width: 480px;
+  color: #626674;
+}
+.landing-example {
+  background: #f1f3ff;
+  border-left: 4px solid var(--accent);
+  padding: 38px;
+}
+.landing-example h2 {
+  font-size: 1.75rem;
+  margin: 20px 0 30px;
+}
+.landing-example ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 28px;
+}
+.landing-example li {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.landing-example svg {
+  flex-shrink: 0;
+  color: #354cff;
+  width: 23px;
+  margin-top: 2px;
+}
+.landing-example p {
+  margin: 5px 0 0;
+  font-size: 0.9375rem;
+  color: #575d74;
+}
+.landing-workflow,
+.client-entry,
+.landing-faq {
+  padding: 64px max(6vw, 24px);
+  scroll-margin-top: 20px;
+}
+.landing-workflow {
+  border-block: 1px solid #e4e5ec;
+  background: #fafafa;
+}
+.landing-workflow h2,
+.client-entry h2 {
+  font-size: clamp(2rem, 3vw, 3rem);
+  max-width: 650px;
+}
+.landing-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 50px;
+  margin-top: 42px;
+}
+.landing-steps article > span {
+  display: block;
+  margin-bottom: 20px;
+  color: #354cff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.landing-steps p {
+  color: #5d616e;
+}
+.client-entry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12%;
+  align-items: center;
+}
+.client-entry form {
+  padding: 30px;
+  border: 1px solid #dfe1eb;
+  border-radius: 12px;
+}
+.client-entry p {
+  max-width: 520px;
+}
+.landing-faq {
+  padding-top: 20px;
+  max-width: 1080px;
+  margin: auto;
+}
+.landing-faq details {
+  border-bottom: 1px solid #e4e5ec;
+  padding: 20px 0;
+}
+.landing-faq summary {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.landing-faq p {
+  color: #585e6d;
+  margin: 16px 0 0;
+}
+.landing-footer {
+  background: #f5f6fa;
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+}
+.upload-files {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.upload-files li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #e4e5ec;
+  padding: 6px 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.upload-files small {
+  white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .landing-header {
+    flex-wrap: wrap;
+    padding: 20px 24px;
+  }
+  .landing-header nav {
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .landing-hero {
+    grid-template-columns: 1fr;
+    padding-block: 50px;
+    gap: 35px;
+  }
+  .landing-example {
+    padding: 28px;
+  }
+  .landing-steps {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .landing-steps article > span {
+    margin-bottom: 10px;
+  }
+  .client-entry {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .client-entry form {
+    padding: 22px;
+  }
+  .landing-workflow,
+  .client-entry,
+  .landing-faq {
+    padding-block: 40px;
+  }
+}
+.link-preview a {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 700px) {
+  .sidebar-label {
+    display: flex;
+    grid-column: 1/-1;
+    grid-row: 2;
+    margin: 0;
+    font-size: 0.75rem;
+  }
+  .sidebar .clients {
+    grid-row: 3;
+  }
+  .sidebar-bottom {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}

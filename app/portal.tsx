@@ -60,7 +60,10 @@ function ModalBox({
   return (
     <dialog
       ref={ref}
-      onCancel={close}
+      onCancel={(e) => {
+        e.preventDefault();
+        close();
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) close();
       }}
@@ -89,6 +92,8 @@ function ImagePreview({ design, token }: { design: Design; token: string }) {
   useEffect(() => {
     let alive = true,
       object = '';
+    setSrc('');
+    setFailed(false);
     const controller = new AbortController();
     fetch(`/api/files/${design.id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -190,6 +195,8 @@ export default function Portal() {
     [importMode, setImportMode] = useState('json'),
     [author, setAuthor] = useState(''),
     [comment, setComment] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState('');
   const touch = useRef<number | null>(null);
   useEffect(() => {
     setToken(new URLSearchParams(location.hash.slice(1)).get('invite') || '');
@@ -287,33 +294,56 @@ export default function Portal() {
     };
   }, [client?.id, prompt, unauthorized]);
   useEffect(() => {
-    const context = (document as Document & {
-      modelContext?: {
-        registerTool(tool: {
-          name: string;
-          description: string;
-          inputSchema: object;
-          annotations: { readOnlyHint: boolean; untrustedContentHint: boolean };
-          execute(input: unknown): unknown;
-        }, options: { signal: AbortSignal }): void | Promise<void>;
-      };
-    }).modelContext;
+    const context = (
+      document as Document & {
+        modelContext?: {
+          registerTool(
+            tool: {
+              name: string;
+              description: string;
+              inputSchema: object;
+              annotations: {
+                readOnlyHint: boolean;
+                untrustedContentHint: boolean;
+              };
+              execute(input: unknown): unknown;
+            },
+            options: { signal: AbortSignal },
+          ): void | Promise<void>;
+        };
+      }
+    ).modelContext;
     if (!context?.registerTool) return;
     const lifecycle = new AbortController();
     try {
-      void Promise.resolve(context.registerTool({
-        name: 'get_selected_client_design_brief',
-        description: 'Read the selected client’s design brief, references, comments, and reactions as the same prompt shown in Agent studio.',
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute(input) {
-          if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length)
-            throw Error('Provide an empty object.');
-          if (!agentBrief.current.clientId || !agentBrief.current.prompt)
-            throw Error('Open an authorized client room first.');
-          return { ...agentBrief.current };
-        },
-      }, { signal: lifecycle.signal })).catch(() => console.warn('Agent tool registration unavailable.'));
+      void Promise.resolve(
+        context.registerTool(
+          {
+            name: 'get_selected_client_design_brief',
+            description:
+              'Read the selected client’s design brief, references, comments, and reactions as the same prompt shown in Agent studio.',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+              additionalProperties: false,
+            },
+            annotations: { readOnlyHint: true, untrustedContentHint: true },
+            execute(input) {
+              if (
+                !input ||
+                typeof input !== 'object' ||
+                Array.isArray(input) ||
+                Object.keys(input).length
+              )
+                throw Error('Provide an empty object.');
+              if (!agentBrief.current.clientId || !agentBrief.current.prompt)
+                throw Error('Open an authorized client room first.');
+              return { ...agentBrief.current };
+            },
+          },
+          { signal: lifecycle.signal },
+        ),
+      ).catch(() => console.warn('Agent tool registration unavailable.'));
     } catch {
       console.warn('Agent tool registration unavailable.');
     }
@@ -327,6 +357,8 @@ export default function Portal() {
   const close = () => {
     setModal(null);
     setInvite('');
+    setFiles([]);
+    setError('');
   };
   function form(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -376,30 +408,43 @@ export default function Portal() {
   if (unauthorized)
     return (
       <main className="welcome" style={style}>
-        <div className="wordmark">
+        <a href="/" className="wordmark">
           <span className="mark">rr</span>Reference Room
-        </div>
+        </a>
         <div className="welcome-content">
-          <p className="eyebrow">A SHARED POINT OF VIEW</p>
           <h1>
-            Good work starts
-            <br />
-            with a reference.
+            {token
+              ? 'This invitation is unavailable.'
+              : 'Your agency workspace'}
           </h1>
-          <p>
-            Collect inspiration. Talk through the details. Find a direction
-            together.
-          </p>
           {token ? (
-            <p role="alert">{error}</p>
+            <>
+              <p role="alert">{error}</p>
+              <p>
+                Ask your agency for a new invitation link. You don’t need to
+                create an account.
+              </p>
+              <a className="button" href="/#client-access">
+                Use a different invitation
+              </a>
+            </>
           ) : (
-            <a
-              className="button primary"
-              href="/signin-with-chatgpt?return_to=%2F"
-              target="_top"
-            >
-              Open your agency workspace <ArrowRight size={18} />
-            </a>
+            <>
+              <p>
+                Sign in with ChatGPT to create or open your agency. Invited
+                clients use their private link instead.
+              </p>
+              <a
+                className="button primary"
+                href="/signin-with-chatgpt?return_to=%2Fworkspace"
+                target="_top"
+              >
+                Continue with ChatGPT <ArrowRight size={18} />
+              </a>
+              <p>
+                <a href="/#client-access">I have a client invitation</a>
+              </p>
+            </>
           )}
         </div>
       </main>
@@ -480,7 +525,10 @@ export default function Portal() {
   return (
     <div className="shell" style={style}>
       <aside className="sidebar">
-        <a href="/" className="wordmark">
+        <a
+          href={token ? `/workspace#invite=${token}` : '/workspace'}
+          className="wordmark"
+        >
           {agency.logo ? (
             <img src={agency.logo} alt="" />
           ) : (
@@ -643,19 +691,22 @@ export default function Portal() {
               </div>
             </section>
             <nav className="tabs" aria-label="Project views">
-              {tabs.map((t) => (
-                <button
-                  key={t.id}
-                  className={view === t.id ? 'active' : ''}
-                  onClick={() => setView(t.id)}
-                >
-                  <t.icon size={17} />
-                  {t.label}
-                  {t.id === 'dashboard' && saved.length > 0 && (
-                    <span>{saved.length}</span>
-                  )}
-                </button>
-              ))}
+              {tabs
+                .filter((t) => isAgency || t.id !== 'agent')
+                .map((t) => (
+                  <button
+                    key={t.id}
+                    className={view === t.id ? 'active' : ''}
+                    aria-current={view === t.id ? 'page' : undefined}
+                    onClick={() => setView(t.id)}
+                  >
+                    <t.icon size={17} />
+                    {t.label}
+                    {t.id === 'dashboard' && saved.length > 0 && (
+                      <span>{saved.length}</span>
+                    )}
+                  </button>
+                ))}
             </nav>
             {view === 'board' && (
               <section className="board-section">
@@ -670,20 +721,23 @@ export default function Portal() {
                       <button
                         key={value}
                         className={filter === value ? 'active' : ''}
+                        aria-pressed={filter === value}
                         onClick={() => setFilter(value)}
                       >
                         {label}
                       </button>
                     ))}
                   </div>
-                  {isAgency && (
-                    <button
-                      className="primary"
-                      onClick={() => setModal('reference')}
-                    >
-                      <Plus size={17} /> Add reference
-                    </button>
-                  )}
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      setFilter('all');
+                      setModal('reference');
+                    }}
+                  >
+                    <Upload size={17} />{' '}
+                    {isAgency ? 'Add reference' : 'Upload references'}
+                  </button>
                 </div>
                 <div className="design-grid">
                   {designs
@@ -694,7 +748,7 @@ export default function Portal() {
                         (filter === 'pinterest' && d.kind === 'pin'),
                     )
                     .map(card)}
-                  {isAgency && (
+                  {
                     <button
                       className="add-tile"
                       onClick={() => setModal('reference')}
@@ -705,7 +759,7 @@ export default function Portal() {
                       <strong>Add something that speaks to you</strong>
                       <small>Upload an image or paste a link</small>
                     </button>
-                  )}
+                  }
                 </div>
                 {!designs.length && (
                   <div className="board-note">
@@ -863,8 +917,9 @@ export default function Portal() {
                     <Layers size={32} />
                     <h2>Something to react to.</h2>
                     <p>
-                      Bring HTML directions from your agent into this room.
-                      Review them one at a time and keep the ones that fit.
+                      {isAgency
+                        ? 'Import HTML designs in Agent studio to start reviewing.'
+                        : 'Your agency will add designs here for your feedback. You can upload references to the mood board while you wait.'}
                     </p>
                     {isAgency && (
                       <button
@@ -1051,7 +1106,9 @@ export default function Portal() {
               ? 'Your studio, your identity'
               : modal === 'client'
                 ? client
-                  ? 'Project details'
+                  ? clientMode === 'new'
+                    ? 'Add a client'
+                    : 'Project details'
                   : 'Add a client'
                 : modal === 'reference'
                   ? 'Add to the mood board'
@@ -1059,7 +1116,9 @@ export default function Portal() {
                     ? 'Import agent designs'
                     : 'Invite your client'
           }
-          close={close}
+          close={() => {
+            if (!busy) close();
+          }}
         >
           {modal === 'agency' && (
             <form
@@ -1114,34 +1173,23 @@ export default function Portal() {
               onSubmit={(e) => {
                 const f = form(e);
                 run(async () => {
-                  const adding = f.get('mode') === 'new';
-                  await mutate(adding ? 'clients' : `clients/${clientId}`, {
-                    name: f.get('name'),
-                    brief: f.get('brief'),
-                  });
+                  const adding = clientMode === 'new';
+                  const result = await api(
+                    adding ? 'clients' : `clients/${clientId}`,
+                    {
+                      name: f.get('name'),
+                      brief: f.get('brief'),
+                    },
+                  );
+                  await refresh();
+                  if (adding && typeof result.id === 'string')
+                    setClientId(result.id);
+                  setView('board');
+                  setFilter('all');
                   close();
                 });
               }}
             >
-              <label>
-                Workspace
-                <select
-                  name="mode"
-                  onChange={(e) => {
-                    const f = e.currentTarget.form!;
-                    (f.elements.namedItem('name') as HTMLInputElement).value =
-                      e.target.value === 'new' ? '' : client?.name || '';
-                    (
-                      f.elements.namedItem('brief') as HTMLTextAreaElement
-                    ).value =
-                      e.target.value === 'new' ? '' : client?.brief || '';
-                  }}
-                  defaultValue={clientMode}
-                >
-                  {client && <option value="edit">Edit {client.name}</option>}
-                  <option value="new">Create new client</option>
-                </select>
-              </label>
               <label>
                 Client / project name
                 <input
@@ -1173,8 +1221,37 @@ export default function Portal() {
                 const f = form(e);
                 run(async () => {
                   if (referenceKind === 'image') {
-                    f.set('clientId', clientId);
-                    await mutate('upload', f, 'Image added to the mood board.');
+                    if (!files.length)
+                      throw Error('Choose at least one image.');
+                    let completed = 0;
+                    try {
+                      for (const file of files) {
+                        setUploadProgress(
+                          `Uploading ${completed + 1} of ${files.length}: ${file.name}`,
+                        );
+                        const data = new FormData();
+                        data.set('clientId', clientId);
+                        data.set('file', file);
+                        data.set(
+                          'title',
+                          files.length === 1 && f.get('title')
+                            ? String(f.get('title'))
+                            : file.name,
+                        );
+                        data.set('notes', String(f.get('notes') || ''));
+                        await api('upload', data);
+                        completed++;
+                        setFiles((pending) =>
+                          pending.filter((item) => item !== file),
+                        );
+                      }
+                      setNotice(
+                        `${completed} ${completed === 1 ? 'image' : 'images'} added to the mood board.`,
+                      );
+                    } finally {
+                      setUploadProgress('');
+                      await refresh();
+                    }
                   } else
                     await mutate(
                       'designs',
@@ -1187,6 +1264,7 @@ export default function Portal() {
                       },
                       'Reference added.',
                     );
+                  setFilter('all');
                   close();
                 });
               }}
@@ -1201,6 +1279,8 @@ export default function Portal() {
                     type="button"
                     key={k}
                     className={referenceKind === k ? 'active' : ''}
+                    disabled={busy}
+                    aria-pressed={referenceKind === k}
                     onClick={() => setReferenceKind(k)}
                   >
                     {l}
@@ -1208,26 +1288,75 @@ export default function Portal() {
                 ))}
               </div>
               <label>
-                Title
+                {referenceKind === 'image'
+                  ? 'Title (optional for one image)'
+                  : 'Title'}
                 <input
                   name="title"
-                  required
+                  required={referenceKind !== 'image'}
                   maxLength={160}
-                  placeholder="What caught your eye?"
+                  placeholder={
+                    referenceKind === 'image'
+                      ? 'Uses the filename if left blank'
+                      : 'What caught your eye?'
+                  }
                 />
               </label>
               {referenceKind === 'image' ? (
-                <label className="upload-zone">
-                  <Upload size={24} />
-                  Choose a reference image
-                  <input
-                    name="file"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    required
-                  />
-                  <small>PNG, JPG, WebP or GIF · up to 10 MB</small>
-                </label>
+                <>
+                  <label className="upload-zone">
+                    <Upload size={24} />
+                    Choose reference images
+                    <input
+                      name="file"
+                      type="file"
+                      multiple
+                      disabled={busy}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(e) => {
+                        const chosen = Array.from(e.target.files || []);
+                        if (chosen.length > 12) {
+                          setError('Choose up to 12 images at a time.');
+                          e.target.value = '';
+                          return;
+                        }
+                        setFiles(chosen);
+                        setError('');
+                      }}
+                    />
+                    <small>
+                      Up to 12 images · PNG, JPG, WebP or GIF · 10 MB each
+                    </small>
+                  </label>
+                  {!!files.length && (
+                    <ul className="upload-files" aria-label="Selected images">
+                      {files.map((file, index) => (
+                        <li key={`${file.name}-${index}`}>
+                          <span>
+                            {file.name}{' '}
+                            <small>
+                              {(file.size / 1_000_000).toFixed(1)} MB
+                            </small>
+                          </span>
+                          <button
+                            type="button"
+                            className="icon"
+                            disabled={busy}
+                            aria-label={`Remove ${file.name}`}
+                            onClick={() =>
+                              setFiles((current) =>
+                                current.filter((_, i) => i !== index),
+                              )
+                            }
+                          >
+                            <X size={16} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {uploadProgress && <p role="status">{uploadProgress}</p>}
+                </>
               ) : (
                 <>
                   <label>
@@ -1258,7 +1387,11 @@ export default function Portal() {
                 </>
               )}
               <button className="primary" disabled={busy}>
-                {busy ? 'Adding…' : 'Add reference'}
+                {busy
+                  ? 'Adding…'
+                  : referenceKind === 'image'
+                    ? `Upload${files.length ? ` ${files.length}` : ''} ${files.length === 1 ? 'image' : 'images'}`
+                    : 'Add reference'}
               </button>
             </form>
           )}
@@ -1357,9 +1490,9 @@ export default function Portal() {
           {modal === 'share' && (
             <div className="share-panel">
               <p>
-                Anyone with this invitation can view and comment on{' '}
-                <strong>{client?.name}</strong>. It does not grant access to
-                other clients or agency settings.
+                Anyone with this invitation can upload references, react, and
+                comment on <strong>{client?.name}</strong>. It does not grant
+                access to other clients or agency settings.
               </p>
               <button
                 className="primary"
@@ -1367,7 +1500,9 @@ export default function Portal() {
                 onClick={() =>
                   run(async () => {
                     const result = await api('invite', { clientId });
-                    setInvite(`${location.origin}/#invite=${result.token}`);
+                    setInvite(
+                      `${location.origin}/workspace#invite=${result.token}`,
+                    );
                   })
                 }
               >
@@ -1409,6 +1544,9 @@ export default function Portal() {
               </p>
             </div>
           )}
+          <button type="button" disabled={busy} onClick={close}>
+            Cancel
+          </button>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -1549,16 +1687,28 @@ export default function Portal() {
                 Add comment <MessageCircle size={16} />
               </button>
             </form>
-            <button
-              className="text-button"
-              onClick={() => {
-                setDetail(null);
-                setView('agent');
-              }}
-            >
-              Discuss this feedback with your agent <Sparkles size={16} />
-            </button>
+            {isAgency && (
+              <button
+                className="text-button"
+                onClick={() => {
+                  setDetail(null);
+                  setView('agent');
+                }}
+              >
+                Discuss this feedback with your agent <Sparkles size={16} />
+              </button>
+            )}
           </section>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setDetail(null);
+              setComment('');
+            }}
+          >
+            Close reference
+          </button>
           {error && (
             <p role="alert" className="error">
               {error}

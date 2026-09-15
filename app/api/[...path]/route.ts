@@ -145,7 +145,6 @@ async function handle(request: Request) {
     }
     if (request.method !== 'POST') fail('Method not allowed.', 405);
     if (path[0] === 'upload') {
-      agencyOnly();
       if (Number(request.headers.get('content-length')) > 11_000_000)
         fail('Images must be under 10 MB.', 413);
       const form = await new Response(
@@ -185,12 +184,13 @@ async function handle(request: Request) {
       });
       try {
         await query(
-          'INSERT INTO designs (id,clientId,title,kind,fileKey,createdAt) VALUES (?,?,?,?,?,?)',
+          'INSERT INTO designs (id,clientId,title,kind,fileKey,notes,createdAt) VALUES (?,?,?,?,?,?,?)',
           designId,
           String(c.id),
           str(form.get('title') || file.name, 160, true),
           'image',
           key,
+          str(form.get('notes') || ''),
           now(),
         ).run();
       } catch (e) {
@@ -228,15 +228,18 @@ async function handle(request: Request) {
           str(b.brief, 8000),
           path[1],
         ).run();
-      } else
+      } else {
+        const clientId = id();
         await query(
           'INSERT INTO clients (id,agencyId,name,brief,createdAt) VALUES (?,?,?,?,?)',
-          id(),
+          clientId,
           String(ctx.agency.id),
           str(b.name, 120, true),
           str(b.brief || '', 8000),
           now(),
         ).run();
+        return Response.json({ id: clientId }, { status: 201 });
+      }
     } else if (path[0] === 'invite') {
       agencyOnly();
       clientFor(b.clientId);
@@ -252,9 +255,9 @@ async function handle(request: Request) {
       ).run();
       return Response.json({ token });
     } else if (path[0] === 'designs') {
-      agencyOnly();
       const c = clientFor(b.clientId);
       if (b.directions) {
+        agencyOnly();
         const directions = parseDirections(str(b.directions, 1_400_000, true));
         await db().batch(
           directions.map((d) =>

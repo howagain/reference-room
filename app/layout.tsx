@@ -3,8 +3,8 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Reference Room — Client mood boards',
   description:
-    'Collect inspiration, find your direction, and bring your design agent into the conversation.',
-  robots: { index: false, follow: false },
+    'A branded mood-board portal for design agencies and their clients. Upload inspiration, discuss designs, and choose a direction together.',
+  robots: { index: true, follow: true },
 };
 export default function RootLayout({
   children,

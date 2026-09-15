@@ -12,7 +12,8 @@ and [mood-boarding](https://www.mood-boarding.com/).
 2. Upload design references or paste a Pinterest board. Public boards import up
    to 50 pins from Pinterest's widget feed; private/unavailable boards retain the
    source link and clearly report why images were not imported.
-3. Share a client invitation. Clients react and comment within their own room.
+3. Share a client invitation. Clients enter without an account, upload up to 12
+   images at once, add reference links, react, and comment within their own room.
 4. Copy the Agent studio prompt into any agent. Discuss the references, attach
    uploaded images, and ask it to generate design directions.
 5. Import its JSON response or a single HTML file. Review the HTML in the swipe
@@ -29,7 +30,8 @@ npm run db:migrate
 npm run dev
 ```
 
-Open http://localhost:5173 and use the local sign-in link. The Sites development
+Open http://localhost:5173 for the landing page or `/workspace` for the agency
+portal, then use the local sign-in link. The Sites development
 plugin supplies a local test user only on loopback. It strips spoofed identity
 headers. Product data lives in local D1/R2 emulation under `.wrangler/state`.
 
@@ -77,8 +79,9 @@ npm run test:workflow
 ```
 
 The workflow check creates synthetic test records with unique identities and
-checks client isolation, comments, reaction replacement, saved designs, image
-upload/retrieval, invitation revocation, and cross-origin write rejection.
+checks client isolation, comments, reaction replacement, saved designs, agency
+and accountless client uploads, upload notes, invalid-image rejection, invitation
+revocation, and cross-origin write rejection.
 
 ## Boundaries
 
@@ -91,3 +94,17 @@ upload/retrieval, invitation revocation, and cross-origin write rejection.
   bundle uploaded image bytes. Images persist in R2.
 - An invitation represents one client reviewer; people sharing the same invitation
   also share the same reaction identity. Comments retain their entered name.
+
+## Client access
+
+The public landing page explains both entry paths. Agencies sign in with ChatGPT;
+clients use a room-specific invitation URL and never need an account. Existing
+root-path invitations redirect to `/workspace` while retaining their fragment.
+Clients can contribute images, web links, and public Pinterest boards. Agency
+branding, client administration, HTML imports, and final dashboard selections
+remain agency-only.
+
+Image batches upload sequentially. If a file fails, completed images remain saved
+and are removed from the pending list; fix or remove the failed file to resume.
+Notes are saved with each image. Invite secrets stay in the URL fragment and
+API authorization header; the database stores only their hash.
