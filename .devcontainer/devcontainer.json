@@ -1,0 +1,8 @@
+{
+  "name": "Reference Room",
+  "dockerComposeFile": "../compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [5173]
+}

@@ -1,0 +1,25 @@
+name: reference-room
+services:
+  app:
+    image: node:22.18.0-bookworm
+    working_dir: /workspace
+    command: sh -c "npm ci && npm run db:migrate && npm run dev"
+    init: true
+    ports:
+      - "127.0.0.1:5178:5173"
+    volumes:
+      - .:/workspace
+      - dependencies:/workspace/node_modules
+      - state:/workspace/.wrangler
+      - dev-cache:/workspace/.vinext
+    environment:
+      RIG_BIND_HOST: 0.0.0.0
+      RIG_LOCAL_USER: "1"
+    labels:
+      rig.slug: moodboard
+    mem_limit: 2g
+    pids_limit: 512
+volumes:
+  dependencies:
+  state:
+  dev-cache:

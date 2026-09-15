@@ -1,0 +1,23 @@
+{
+  "template": "sites-compose",
+  "name": "moodboard",
+  "wiki": {
+    "schema": "automate-friday/rig-wiki-identity/v1",
+    "canonical": "concepts/AgencyMoodboard",
+    "connections": [
+      "VibeCodingDesignPatterns",
+      "ProgressiveAutomationLadder"
+    ]
+  },
+  "aspects": {
+    "base": "node:22.18.0-bookworm",
+    "runtime": "npm",
+    "container": "compose"
+  },
+  "app": {
+    "port": 5173,
+    "hostPort": 5178,
+    "start": "docker compose up -d",
+    "stop": "docker compose stop"
+  }
+}
