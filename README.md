@@ -122,3 +122,5 @@ This creates a separate browser tab and a synthetic client comment. It verifies
 that the visible form values are submitted even when native autofill has not
 updated React state, then closes the test tab. Run it when another browser review
 is not using the shared browser selection.
+
+[Usability review and coverage limits](docs/USABILITY.md). For the native upload/error recovery check, leave a local invited client room open in managed Chrome and run `TEST_INVITATION='YOUR_OPEN_LOCAL_INVITATION_URL' node tests/upload-browser.mjs`. It creates one synthetic image.
