@@ -878,7 +878,7 @@ dialog p {
   font-weight: 600;
 }
 .upload-zone {
-  border: 1px dashed #c9ccd8;
+  border: 1px solid #c9ccd8;
   padding: 30px;
   justify-items: center;
   border-radius: 8px;

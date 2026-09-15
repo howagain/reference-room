@@ -108,3 +108,17 @@ Image batches upload sequentially. If a file fails, completed images remain save
 and are removed from the pending list; fix or remove the failed file to resume.
 Notes are saved with each image. Invite secrets stay in the URL fragment and
 API authorization header; the database stores only their hash.
+
+### Browser regression
+
+On an Automate Friday machine with the managed browser available, start the RIG,
+create a test client with at least one reference, and provide its invitation:
+
+```sh
+TEST_INVITATION='http://localhost:5178/workspace#invite=YOUR_LOCAL_TEST_TOKEN' node tests/comment-browser.mjs
+```
+
+This creates a separate browser tab and a synthetic client comment. It verifies
+that the visible form values are submitted even when native autofill has not
+updated React state, then closes the test tab. Run it when another browser review
+is not using the shared browser selection.

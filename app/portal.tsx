@@ -196,8 +196,15 @@ export default function Portal() {
     [author, setAuthor] = useState(''),
     [comment, setComment] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState('');
   const touch = useRef<number | null>(null);
+  useEffect(() => {
+    if (!fileInput.current) return;
+    const selection = new DataTransfer();
+    files.forEach((file) => selection.items.add(file));
+    fileInput.current.files = selection.files;
+  }, [files, modal, referenceKind]);
   useEffect(() => {
     setToken(new URLSearchParams(location.hash.slice(1)).get('invite') || '');
     setReady(true);
@@ -973,6 +980,7 @@ export default function Portal() {
                     <details>
                       <summary>Read the prompt</summary>
                       <textarea
+                        name="agentPrompt"
                         aria-label="Agent prompt"
                         readOnly
                         value={prompt}
@@ -1308,6 +1316,7 @@ export default function Portal() {
                     <Upload size={24} />
                     Choose reference images
                     <input
+                      ref={fileInput}
                       name="file"
                       type="file"
                       multiple
@@ -1318,6 +1327,7 @@ export default function Portal() {
                         if (chosen.length > 12) {
                           setError('Choose up to 12 images at a time.');
                           e.target.value = '';
+                          setFiles([]);
                           return;
                         }
                         setFiles(chosen);
@@ -1343,11 +1353,12 @@ export default function Portal() {
                             className="icon"
                             disabled={busy}
                             aria-label={`Remove ${file.name}`}
-                            onClick={() =>
+                            onClick={() => {
                               setFiles((current) =>
                                 current.filter((_, i) => i !== index),
-                              )
-                            }
+                              );
+                              setError('');
+                            }}
                           >
                             <X size={16} />
                           </button>
@@ -1514,6 +1525,7 @@ export default function Portal() {
                   <label>
                     Client invitation
                     <input
+                      name="invitation"
                       readOnly
                       value={invite}
                       onFocus={(e) => e.target.select()}
@@ -1651,12 +1663,17 @@ export default function Portal() {
               ))}
             <form
               onSubmit={(e) => {
-                e.preventDefault();
+                const fields = form(e);
+                const submittedAuthor = String(fields.get('author') || '');
+                const submittedComment = String(fields.get('body') || '');
+                // Submit visible values, including native autofill, before a saving-state render.
+                setAuthor(submittedAuthor);
+                setComment(submittedComment);
                 run(async () => {
                   await mutate('comments', {
                     designId: selected.id,
-                    author,
-                    body: comment,
+                    author: submittedAuthor,
+                    body: submittedComment,
                   });
                   setComment('');
                 });
@@ -1665,6 +1682,8 @@ export default function Portal() {
               <label>
                 Your name
                 <input
+                  name="author"
+                  autoComplete="name"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
                   required
@@ -1675,6 +1694,7 @@ export default function Portal() {
               <label>
                 Your feedback
                 <textarea
+                  name="body"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   required
