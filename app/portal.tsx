@@ -279,6 +279,46 @@ export default function Portal() {
       designs.some((d) => d.id === r.designId),
     ) || [];
   const prompt = client ? agentPrompt(client, designs, feedback, votes) : '';
+  const agentBrief = useRef({ clientId: '', prompt: '' });
+  useEffect(() => {
+    agentBrief.current = {
+      clientId: !unauthorized && client ? client.id : '',
+      prompt: !unauthorized ? prompt : '',
+    };
+  }, [client?.id, prompt, unauthorized]);
+  useEffect(() => {
+    const context = (document as Document & {
+      modelContext?: {
+        registerTool(tool: {
+          name: string;
+          description: string;
+          inputSchema: object;
+          annotations: { readOnlyHint: boolean; untrustedContentHint: boolean };
+          execute(input: unknown): unknown;
+        }, options: { signal: AbortSignal }): void | Promise<void>;
+      };
+    }).modelContext;
+    if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    try {
+      void Promise.resolve(context.registerTool({
+        name: 'get_selected_client_design_brief',
+        description: 'Read the selected client’s design brief, references, comments, and reactions as the same prompt shown in Agent studio.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute(input) {
+          if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length)
+            throw Error('Provide an empty object.');
+          if (!agentBrief.current.clientId || !agentBrief.current.prompt)
+            throw Error('Open an authorized client room first.');
+          return { ...agentBrief.current };
+        },
+      }, { signal: lifecycle.signal })).catch(() => console.warn('Agent tool registration unavailable.'));
+    } catch {
+      console.warn('Agent tool registration unavailable.');
+    }
+    return () => lifecycle.abort();
+  }, []);
   const style = { '--accent': agency?.accent || '#354cff' } as CSSProperties;
   useEffect(() => {
     if (agency)

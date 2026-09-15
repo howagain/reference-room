@@ -1,6 +1,8 @@
 # Reference Room
 
 An MIT-licensed mood-board portal for design agencies and their clients.
+
+[Open Reference Room](https://reference-room.jhaugen.chatgpt.site) · [Source](https://github.com/howagain/reference-room)
 Original implementation inspired by [Taste](https://buildwithtaste.com/how-it-works)
 and [mood-boarding](https://www.mood-boarding.com/).
 
@@ -55,8 +57,9 @@ The agency owner is identified by the trusted Sites authentication dispatcher.
 Client invitations contain a random bearer secret, stored only as a SHA-256 hash
 on the server. Replacing or revoking an invitation invalidates earlier links.
 
-A private Sites deployment is an owner preview. For external clients, the host
-must permit access to invitation routes. A separate self-hosted deployment must
+The published portal permits external visitors. Agency workspaces require ChatGPT
+sign-in; clients enter through their private invitation links. Hosting access and
+board authorization are separate. A private Sites deployment is an owner preview. A separate self-hosted deployment must
 provide a trusted identity proxy that strips visitor-provided
 `oai-authenticated-user-*` headers and injects verified identity. Never expose
 Wrangler's raw production-preview server directly to the internet. Custom domains
